@@ -1,0 +1,19 @@
+services:
+  # Unified Web Service (FastAPI Backend + React Static Production Frontend)
+  - type: web
+    name: corporate-travel-analytics
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: "cd frontend && npm install && npm run build && cd .. && pip install -r requirements.txt"
+    startCommand: "python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: JWT_SECRET_KEY
+        value: "travel_analytics_enterprise_jwt_secret_2026"
+      - key: PYTHON_VERSION
+        value: 3.10.12

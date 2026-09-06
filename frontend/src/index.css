@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* High Contrast Theme Accessibility Layer */
+html.contrast,
+.contrast {
+  color-scheme: dark;
+}
+
+.contrast body,
+.contrast div.bg-slate-50,
+.contrast div.bg-slate-900,
+.contrast div.bg-white,
+.contrast div.bg-slate-800,
+.contrast header,
+.contrast aside,
+.contrast main,
+.contrast section {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.contrast .border-slate-200,
+.contrast .border-slate-700,
+.contrast .border-slate-800,
+.contrast border {
+  border-color: #facc15 !important;
+}
+
+.contrast button.bg-blue-600,
+.contrast button.bg-indigo-600,
+.contrast div.bg-blue-600 {
+  background-color: #facc15 !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
+
+.contrast .text-blue-600,
+.contrast .text-blue-400,
+.contrast .text-indigo-600,
+.contrast .text-emerald-500 {
+  color: #facc15 !important;
+}
