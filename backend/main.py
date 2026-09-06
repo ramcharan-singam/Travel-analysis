@@ -5,6 +5,7 @@ import csv
 import json
 import uuid
 import datetime
+import mimetypes
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File, Depends, Query, status
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, HTMLResponse
@@ -12,6 +13,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, text
+
+# Register explicit MIME types for Linux/Render production compatibility
+mimetypes.add_type('text/css', '.css')
+mimetypes.add_type('application/javascript', '.js')
+mimetypes.add_type('image/svg+xml', '.svg')
 
 # Add backend root to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -90,10 +96,16 @@ async def generic_exception_handler(request: Request, exc: Exception):
         }
     )
 
-# Safe Startup Event: Initializes DB Schema/View without destroying existing records
+from seed_data import generate_all_data
+
+# Safe Startup Event: Initializes DB Schema/View and seeds initial data if missing
 @app.on_event("startup")
 def startup_event():
     init_db()
+    try:
+        generate_all_data()
+    except Exception as e:
+        print(f"Startup seeding notice: {e}")
 
 # --- HEALTH & READINESS PROBES ---
 
@@ -941,10 +953,37 @@ def register_complaint(req: ComplaintRequest, current_user: User = Depends(get_c
     actor = current_user.name or current_user.email or req.submitted_by
     return submit_complaint(req.subject, req.details, actor)
 
-# Serve Frontend static dist files if built
+# Production Static File & SPA Catch-All Route Handler
 frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
 if os.path.exists(frontend_dist):
-    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="static")
+    assets_dir = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(request: Request, full_path: str):
+        # Exclude API endpoints, health probes, and docs from SPA fallback
+        if (
+            full_path.startswith("api/") or 
+            full_path == "api" or 
+            full_path.startswith("health") or 
+            full_path.startswith("ready") or 
+            full_path.startswith("docs") or 
+            full_path.startswith("openapi.json")
+        ):
+            raise HTTPException(status_code=404, detail="API route not found")
+
+        # Serve static file directly if requested file exists on disk
+        target_file = os.path.join(frontend_dist, full_path)
+        if full_path and os.path.isfile(target_file):
+            return FileResponse(target_file)
+
+        # Fallback to index.html for React SPA client-side routing
+        index_html = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_html):
+            return FileResponse(index_html)
+
+        raise HTTPException(status_code=404, detail="Resource not found")
 
 if __name__ == "__main__":
     import uvicorn
